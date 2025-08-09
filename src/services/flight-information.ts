@@ -19,7 +19,7 @@ export interface FlightInfo {
    */
   arrivalTime: string;
    /**
-   * The flight number (e.g., "BA287"). Optional as input might be locations/times.
+   * The flight number (e.g., "LX64"). Optional as input might be locations/times.
    */
    flightNumber?: string;
    /**
@@ -74,25 +74,65 @@ export async function getFlightInfo(details: string | { departureAirport: string
   //   throw new Error("Could not retrieve flight information.");
   // }
 
-
-  // Returning a mock response for now.
+  // Mock data with realistic flight details
   const now = new Date();
-  const departureTime = new Date(now.getTime() + 2 * 60 * 60 * 1000); // Departure in 2 hours
-  const arrivalTime = new Date(departureTime.getTime() + 8 * 60 * 60 * 1000); // Arrival 8 hours later
+  
+  let depAirport: string;
+  let arrAirport: string;
+  let flightNum: string;
+  let duration: number;
+  let departureTime: Date;
 
-  let depAirport = "JFK";
-  let arrAirport = "LHR";
-  let flightNum = "JE123";
-
-  if(typeof details !== 'string'){
-      depAirport = details.departureAirport.substring(0, 3).toUpperCase() || "UNK";
-      arrAirport = details.arrivalAirport.substring(0, 3).toUpperCase() || "UNK";
-      flightNum = `${depAirport[0]}${arrAirport[0]}${Math.floor(Math.random()*900)+100}` // Generate mock flight number like JL456
-  } else {
-      flightNum = details;
-      // Could add logic here to guess airports based on flight number pattern if needed
+  // OPTION A: Flight number provided (string input)
+  if (typeof details === 'string') {
+    flightNum = details.replace(/\s+/g, ''); // Remove spaces from flight number
+    
+    // Check if it's the specific LX64 flight
+    if (flightNum.toUpperCase() === 'LX64') {
+      depAirport = "ZUR"; // Zurich Airport
+      arrAirport = "MIA"; // Miami International Airport
+      duration = 11 * 60 + 30; // 11 hours 30 minutes
+      
+      // LX64 typically departs ZUR around 13:25 local time (11:25 UTC)
+      const tomorrow = new Date(now);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setUTCHours(11, 25, 0, 0); // 13:25 Zurich time = 11:25 UTC
+      departureTime = tomorrow;
+    } else {
+      // For other flight numbers, use default JFK to LHR
+      depAirport = "JFK";
+      arrAirport = "LHR";
+      duration = 8 * 60; // 8 hours
+      
+      // Default departure time: 2 hours from now
+      departureTime = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+    }
+  } 
+  // OPTION B: Route details provided (object input with airports + date)
+  else {
+    depAirport = details.departureAirport.substring(0, 3).toUpperCase() || "UNK";
+    arrAirport = details.arrivalAirport.substring(0, 3).toUpperCase() || "UNK";
+    flightNum = `${depAirport[0]}${arrAirport[0]}${Math.floor(Math.random()*900)+100}`; // Generate mock flight number
+    
+    // Use provided date or default to tomorrow
+    const flightDate = details.date ? new Date(details.date) : new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    
+    // Set a default departure time (morning departure)
+    flightDate.setUTCHours(10, 0, 0, 0); // 10:00 UTC
+    departureTime = flightDate;
+    
+    // Estimate duration based on route (simplified logic)
+    if (depAirport === "ZUR" && arrAirport === "MIA") {
+      duration = 11 * 60 + 30; // Zurich to Miami
+    } else if (depAirport === "JFK" && arrAirport === "LHR") {
+      duration = 7 * 60; // NYC to London
+    } else {
+      duration = 8 * 60; // Default 8 hours for other routes
+    }
   }
 
+  // Calculate arrival time
+  const arrivalTime = new Date(departureTime.getTime() + duration * 60 * 1000);
 
   return {
     departureAirport: depAirport,
@@ -100,6 +140,6 @@ export async function getFlightInfo(details: string | { departureAirport: string
     departureTime: departureTime.toISOString(),
     arrivalTime: arrivalTime.toISOString(),
     flightNumber: flightNum,
-    durationMinutes: 8 * 60, // 8 hours
+    durationMinutes: duration,
   };
 }
